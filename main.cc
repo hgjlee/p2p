@@ -49,30 +49,42 @@ ChatDialog::ChatDialog()
 	connect(socket, SIGNAL(readyRead()), this, SLOT(readMessages()));
 }
 
-QByteArray ChatDialog::serialization(QString message){
+QByteArray ChatDialog::serialize_message(QString message){
 	QVariantMap message_qmap;
 
 	//Constructing rumor message
 	message_qmap.insert("ChatText", message);
 	message_qmap.insert("Origin", QString::number(socket->myPort);
 	message_qmap.insert("SeqNo", seqnum);
-	seqnum += 1; 
 
 	//Append new messages to a list
 	if(!message_list.contains(QString::number(socket->myPort))){
-		QMap<quint32, QVariantMap> qmap;
-        message_list.insert(QString::number(mySocket->myPort), qmap);
-        message_list[QString::number(mySocket->myPort)].insert(message_qmap.value("SeqNo").toUInt(), message_qmap);
+		QList tmp;
+		tmp.insert(seqnum, message); 
+        message_list.insert(QString::number(socket->myPort), tmp);
 	} else {
-		message_list[QString::number(mySocket->myPort)].insert(message_qmap.value("SeqNo").toUInt(), message_qmap);
+        message_list.insert(QString::number(socket->myPort), tmp);
 	}
+
+	seqnum += 1; 
 
 	//We serialize the message into QByteArray
 	QByteArray byte_arr;
 	QDataStream stream(&byte_arr,QIODevice::ReadWrite);
-	stream  << message_qmap;
+	stream << message_qmap;
 
 	return byte_arr;
+}
+
+QByteArray ChatDialog::serialize_status(){
+	QMap<QString, QMap<QString, quint32> status; 
+	status.insert("Want", wants);
+
+	QByteArray status_data;
+    QDataStream stream(&status_data,QIODevice::ReadWrite);
+    stream << status;
+
+    return status_data; 
 }
 
 void ChatDialog::gotReturnPressed()
@@ -84,7 +96,7 @@ void ChatDialog::gotReturnPressed()
 
 	//Fetch the message then serialize it. 
 	Qstring str_input = textline->text();
-	QByteArray serialized_str = serializeMessage(str_input);
+	QByteArray serialized_str = serialize_message(str_input);
 
 	//Update the neighbors' want list
 	if()
