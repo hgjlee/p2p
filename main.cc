@@ -54,17 +54,13 @@ QByteArray ChatDialog::serialize_message(QString message){
 
 	//Constructing rumor message
 	message_qmap.insert("ChatText", message);
-	message_qmap.insert("Origin", QString::number(socket->myPort);
+	message_qmap.insert("Origin", QString::number(socket->myPort));
 	message_qmap.insert("SeqNo", seqnum);
 
 	//Append new messages to a list
-	if(!message_list.contains(QString::number(socket->myPort))){
-		QList tmp;
-		tmp.insert(seqnum, message); 
-        message_list.insert(QString::number(socket->myPort), tmp);
-	} else {
-        message_list.insert(QString::number(socket->myPort), tmp);
-	}
+	QList<QString> tmp;
+	tmp.insert(seqnum, message); 
+    message_list.insert(QString::number(socket->myPort), tmp);
 
 	seqnum++; 
 
@@ -77,7 +73,7 @@ QByteArray ChatDialog::serialize_message(QString message){
 }
 
 QByteArray ChatDialog::serialize_status(){
-	QMap<QString, QMap<QString, quint32> status; 
+	QMap<QString, QMap<QString, quint32> > status; 
 	status.insert("Want", wants);
 
 	QByteArray status_data;
@@ -96,7 +92,7 @@ void ChatDialog::sendMessages(QByteArray message){
 		peer = socket->myPort - 1; 
 	} else { 
 		srand(time(NULL));
-		random = (rand() % 2); 
+		int random = (rand() % 2); 
 		if(random == 1){
 			peer = socket->myPort + 1;
 		} else{
@@ -111,10 +107,10 @@ void ChatDialog::sendStatus(QByteArray status){
 	socket->writeDatagram(status.data(), status.size(), QHostAddress("127.0.0.1"), peer_port);
 }
 
-void ChatDialog::rumor(QVariantMap messages){
+void ChatDialog::rumor(QVariantMap data){
 	QByteArray rumors;
     QDataStream stream(&rumors,QIODevice::ReadWrite);
-    stream << messages;
+    stream << data;
 
     sendMessages(rumors);
 }
@@ -127,12 +123,10 @@ void ChatDialog::gotReturnPressed()
 	textview->append(QString::number(socket->myPort) + ": " + textline->text());
 
 	//Fetch the message then serialize it. 
-	Qstring str_input = textline->text();
+	QString str_input = textline->text();
 	QByteArray serialized_str = serialize_message(str_input);
 
 	//Update the neighbors' want list
-	if()
-
 	sendMessages(serialized_str);
 	// Clear the textline to get ready for the next input message.
 	textline->clear();
@@ -183,4 +177,3 @@ int main(int argc, char **argv)
 	// Enter the Qt main loop; everything else is event driven
 	return app.exec();
 }
-
