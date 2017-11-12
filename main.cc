@@ -87,6 +87,26 @@ QByteArray ChatDialog::serialize_status(){
     return status_data; 
 }
 
+void ChatDialog::sendMessages(QByteArray message){
+
+	//Choosing to which peer to send the messages
+	if (socket->myPort == socket->myPortMin){ 
+		peer = socket->myPort + 1;
+	} else if (socket->myPort == socket->myPortMax){
+		peer = socket->myPort - 1; 
+	} else { 
+		srand(time(NULL));
+		random = (rand() % 2); 
+		if(random == 1){
+			peer = socket->myPort + 1;
+		} else{
+			peer = socket->myPort -1; 
+		}
+	}
+
+	mySocket->writeDatagram(message, message.size(), QHostAddress("127.0.0.1"), peer);
+}
+
 void ChatDialog::gotReturnPressed()
 {
 	// Initially, just echo the string locally.

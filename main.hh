@@ -13,13 +13,25 @@ class ChatDialog : public QDialog
 
 public:
 	ChatDialog();
+	NetSocket *socket;
+	int seqnum;
+    QTimer * timer;
+    QTimer * anti_timer;
+    void sendMessages(QByteArray); 
+    QMap<QString, QMap<quint32, QvariantMap> message_list; 
+    QMap<QString, quint32> wants;
 
 public slots:
 	void gotReturnPressed();
+	void timerHandler();
+	void antiHandler();
+	void readMessages(); 
 
 private:
 	QTextEdit *textview;
 	QLineEdit *textline;
+	QByteArray serialize_message(QString);
+    QByteArray serialize_status();
 };
 
 class NetSocket : public QUdpSocket
