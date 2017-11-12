@@ -66,7 +66,7 @@ QByteArray ChatDialog::serialize_message(QString message){
         message_list.insert(QString::number(socket->myPort), tmp);
 	}
 
-	seqnum += 1; 
+	seqnum++; 
 
 	//We serialize the message into QByteArray
 	QByteArray byte_arr;
@@ -104,7 +104,19 @@ void ChatDialog::sendMessages(QByteArray message){
 		}
 	}
 
-	mySocket->writeDatagram(message, message.size(), QHostAddress("127.0.0.1"), peer);
+	socket->writeDatagram(message, message.size(), QHostAddress("127.0.0.1"), peer);
+}
+
+void ChatDialog::sendStatus(QByteArray status){
+	socket->writeDatagram(status.data(), status.size(), QHostAddress("127.0.0.1"), peer_port);
+}
+
+void ChatDialog::rumor(QVariantMap messages){
+	QByteArray rumors;
+    QDataStream stream(&rumors,QIODevice::ReadWrite);
+    stream << messages;
+
+    sendMessages(rumors);
 }
 
 void ChatDialog::gotReturnPressed()

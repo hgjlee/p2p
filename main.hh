@@ -20,6 +20,8 @@ public:
     void sendMessages(QByteArray); 
     QMap<QString, QMap<quint32, QvariantMap> message_list; 
     QMap<QString, quint32> wants;
+    int peer;
+    int peer_port; 
 
 public slots:
 	void gotReturnPressed();
