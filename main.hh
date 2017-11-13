@@ -35,7 +35,6 @@ class ChatDialog : public QDialog
 		int seqnum;
 	    QTimer * timer;
 	    QTimer * anti_timer;
-	    void sendMessages(QByteArray); 
 	    QMap<QString, QList<QString> > message_list; 
 	    QMap<QString, quint32> wants;
 	    int peer;
@@ -48,7 +47,13 @@ class ChatDialog : public QDialog
 		// void readMessages(); 
 		void sendStatus(QByteArray status);
 		void rumor(QVariantMap data);
+		void pickAndSend(QByteArray); 
+		void processTheDatagram(QByteArray bytesIn);
+		void readPendingDatagrams();
+		void readMessage(QVariantMap wants);
+		void readStatus(QMap<QString, QMap<QString, quint32> > wants);
 
+	
 	private:
 		QTextEdit *textview;
 		QLineEdit *textline;

@@ -28,34 +28,33 @@ ChatDialog::ChatDialog()
 	socket = new NetSocket();
 	socket->bind();
 
+	seqnum = 0; 
+	message_status = new QMap<QString, quint32>;
+
 	//Setting timer
 	timer = new QTimer(this);
 	connect(timer, SIGNAL(timeout()), this, SLOT(timerHandler()));
 
 	//Setting antientropy timer
-	/*
 	anti_timer = new QTimer(this);
 	connect(anti_timer, SIGNAL(timeout()), this, SLOT(antiHandler()));
 	anti_timer->start(10000);
-	*/
-
-	seqnum = 0; 
-	message_status = new QMap<QString, quint32>;
+	
 
 	//Register a callback on the textline's returnPressed signal
 	connect(textline, SIGNAL(returnPressed()), this, SLOT(gotReturnPressed()));
 
 	//Register a callback on the textline's readyRead signal 
-	connect(socket, SIGNAL(readyRead()), this, SLOT(readMessages()));
+	connect(socket, SIGNAL(readyRead()), this, SLOT(readMessage()));
 }
 
 QByteArray ChatDialog::serialize_message(QString message){
 	QVariantMap message_qmap;
 
-	//Constructing rumor message
-	message_qmap.insert("ChatText", message);
-	message_qmap.insert("Origin", QString::number(socket->myPort));
-	message_qmap.insert("SeqNo", seqnum);
+	//Constructing a variantmap
+	message_qmap["ChatText"] = message; 
+	message_qmap["Origin"] = socket->myPort; 
+	message_qmap["SeqNo"] = seqnum;
 
 	//Append new messages to a list
 	QList<QString> tmp;
@@ -66,7 +65,7 @@ QByteArray ChatDialog::serialize_message(QString message){
 
 	//We serialize the message into QByteArray
 	QByteArray byte_arr;
-	QDataStream stream(&byte_arr,QIODevice::ReadWrite);
+	QDataStream stream(&byte_arr,QIODevice::WriteOnly);
 	stream << message_qmap;
 
 	return byte_arr;
@@ -83,7 +82,7 @@ QByteArray ChatDialog::serialize_status(){
     return status_data; 
 }
 
-void ChatDialog::sendMessages(QByteArray message){
+void ChatDialog::pickAndSend(QByteArray message){
 
 	//Choosing to which peer to send the messages
 	if (socket->myPort == socket->myPortMin){ 
@@ -100,11 +99,11 @@ void ChatDialog::sendMessages(QByteArray message){
 		}
 	}
 
-	socket->writeDatagram(message, message.size(), QHostAddress("127.0.0.1"), peer);
+	socket->writeDatagram(message, QHostAddress("127.0.0.1"), peer);
 }
 
 void ChatDialog::sendStatus(QByteArray status){
-	socket->writeDatagram(status.data(), status.size(), QHostAddress("127.0.0.1"), peer_port);
+	socket->writeDatagram(status.data(), QHostAddress("127.0.0.1"), peer_port);
 }
 
 void ChatDialog::rumor(QVariantMap data){
@@ -112,7 +111,62 @@ void ChatDialog::rumor(QVariantMap data){
     QDataStream stream(&rumors,QIODevice::ReadWrite);
     stream << data;
 
-    sendMessages(rumors);
+    pickAndSend(rumors);
+}
+
+void ChatDialog::readPendingDatagrams()
+{ 
+    //reference: https://doc.qt.io/qt-5.6/qudpsocket.html
+    while (socket->hasPendingDatagrams()) {
+        QByteArray datagram;
+        datagram.resize(socket->pendingDatagramSize());
+        QHostAddress sender;
+        quint16 senderPort;
+
+        // receive and read message
+        socket->readDatagram(datagram.data(), datagram.size(), &sender,  &senderPort);
+        //save the sender port number in a global variable
+        peer_port = senderPort;
+        processTheDatagram(datagram);
+    }
+}
+
+
+void ChatDialog::processTheDatagram(QByteArray bytesIn)
+{
+    
+    QVariantMap message;
+    QMap<QString, QMap<QString, quint32> > status;
+    QDataStream readmessage(&bytesIn, QIODevice::ReadOnly);
+
+    readmessage >> message;
+    readmessage >> status; 
+
+    if(readmessage.status() != QDataStream::Ok) {
+        qDebug() << "ERROR: Failed to deserialize datagram into QVariantMap";
+        return;
+    }
+
+    if (message.contains("ChatText")){
+        qDebug() << "INFO: Received a chat message";
+        readMessage(message);
+    }
+    else if(message.contains("Want")){
+        qDebug() << "INFO: Received a status message";
+        readStatus(status);
+    }
+    else{
+        qDebug() << "ERROR: Message is neither ChatText or Want";
+        return; 
+    }
+}
+
+void ChatDialog::readMessage(QVariantMap wants){
+
+}
+
+void ChatDialog::readStatus(QMap<QString, QMap<QString, quint32> > wants){
+
 }
 
 void ChatDialog::gotReturnPressed()
@@ -127,7 +181,7 @@ void ChatDialog::gotReturnPressed()
 	QByteArray serialized_str = serialize_message(str_input);
 
 	//Update the neighbors' want list
-	sendMessages(serialized_str);
+	pickAndSend(serialized_str);
 	// Clear the textline to get ready for the next input message.
 	textline->clear();
 }
